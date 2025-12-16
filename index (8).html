@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unreal Engine Gameplay Framework - 3D Architecture</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 30px rgba(0, 150, 255, 0.5), 0 0 60px rgba(0, 150, 255, 0.3);
+            margin-bottom: 8px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #888;
+            letter-spacing: 2px;
+        }
+        
+        .legend {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            max-width: 280px;
+        }
+        
+        .legend h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: #0af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 150, 255, 0.2);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .legend-item span {
+            line-height: 1.3;
+        }
+        
+        .server-only { background: linear-gradient(135deg, #ff4444, #aa2222); box-shadow: 0 0 10px rgba(255, 68, 68, 0.5); }
+        .all-clients { background: linear-gradient(135deg, #44ff88, #22aa44); box-shadow: 0 0 10px rgba(68, 255, 136, 0.5); }
+        .owning-client { background: linear-gradient(135deg, #ffaa44, #aa6622); box-shadow: 0 0 10px rgba(255, 170, 68, 0.5); }
+        .local-only { background: linear-gradient(135deg, #aa44ff, #6622aa); box-shadow: 0 0 10px rgba(170, 68, 255, 0.5); }
+        
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(10, 10, 20, 0.9);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            display: none;
+        }
+        
+        .info-panel.active {
+            display: block;
+        }
+        
+        .info-panel h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .info-panel .badge {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+        }
+        
+        .info-panel p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #bbb;
+        }
+        
+        .info-panel .key-points {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .info-panel .key-point {
+            background: rgba(0, 150, 255, 0.1);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .controls {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .controls h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            color: #0af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+        
+        .controls p {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .controls .key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: #fff;
+        }
+        
+        .zone-labels {
+            position: absolute;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+        }
+        
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .relationships {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            max-width: 260px;
+        }
+
+        .relationships h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            color: #0af;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+        }
+
+        .relationship-item {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 6px;
+            padding-left: 10px;
+            border-left: 2px solid rgba(0, 150, 255, 0.3);
+        }
+
+        .relationship-item strong {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="header">
+        <h1>Unreal Engine Gameplay Framework</h1>
+        <p>Interactive 3D Architecture Visualization</p>
+    </div>
+    
+    <div class="legend">
+        <h3>Network Presence</h3>
+        <div class="legend-item">
+            <div class="legend-color server-only"></div>
+            <span><strong>Server Only</strong> - Exists only on the server, clients cannot access</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color all-clients"></div>
+            <span><strong>Replicated to All</strong> - Server + all connected clients</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color owning-client"></div>
+            <span><strong>Server + Owner</strong> - Server + owning client only</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color local-only"></div>
+            <span><strong>Local Only</strong> - Each machine has its own instance</span>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <h3>Controls</h3>
+        <p><span class="key">Drag</span> Rotate view</p>
+        <p><span class="key">Scroll</span> Zoom in/out</p>
+        <p><span class="key">Click</span> Select class</p>
+        <p><span class="key">R</span> Reset view</p>
+    </div>
+
+    <div class="relationships">
+        <h3>Key Relationships</h3>
+        <div class="relationship-item"><strong>GameMode</strong> spawns PlayerController, Pawn, GameState, PlayerState</div>
+        <div class="relationship-item"><strong>PlayerController</strong> possesses Pawn and owns HUD</div>
+        <div class="relationship-item"><strong>PlayerState</strong> persists across Pawn deaths</div>
+        <div class="relationship-item"><strong>GameState</strong> holds array of all PlayerStates</div>
+        <div class="relationship-item"><strong>GameInstance</strong> persists across level loads</div>
+    </div>
+    
+    <div class="info-panel" id="info-panel">
+        <button class="close-btn" onclick="closeInfoPanel()">&times;</button>
+        <h2 id="info-title"></h2>
+        <p id="info-desc"></p>
+        <div class="key-points" id="info-points"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x0a0a0f, 1);
+        container.appendChild(renderer.domElement);
+        
+        // Camera position
+        camera.position.set(15, 12, 20);
+        camera.lookAt(0, 0, 0);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+        
+        const pointLight1 = new THREE.PointLight(0x0088ff, 1, 50);
+        pointLight1.position.set(-10, 10, 10);
+        scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0xff4444, 0.5, 50);
+        pointLight2.position.set(10, -5, -10);
+        scene.add(pointLight2);
+        
+        // Class data with positions and info
+        const classData = {
+            'GameMode': {
+                position: [0, 8, 0],
+                color: 0xff4444,
+                zone: 'server-only',
+                description: 'The authority on game rules. Exists ONLY on the server - clients cannot access it directly. Handles player spawning, game flow, win conditions, and determines which Pawn/PlayerController classes to use.',
+                keyPoints: ['Server Authority', 'Spawns Players', 'Game Rules', 'Match Flow']
+            },
+            'GameState': {
+                position: [0, 4, 0],
+                color: 0x44ff88,
+                zone: 'all-clients',
+                description: 'The replicated "shadow" of GameMode. Contains public game information that all clients need: match time, team scores, objectives, and a list of all PlayerStates. This is how clients know about the game state.',
+                keyPoints: ['Replicated to All', 'Public Game Data', 'Team Scores', 'PlayerState Array']
+            },
+            'PlayerController': {
+                position: [-6, 2, 4],
+                color: 0xffaa44,
+                zone: 'owning-client',
+                description: 'The player\'s "brain" - handles input and possesses Pawns. Exists on server and ONLY the owning client (not other clients). This is why you can\'t access another player\'s PlayerController.',
+                keyPoints: ['Input Handler', 'Possesses Pawn', 'Server + Owner Only', 'Persists on Death']
+            },
+            'PlayerState': {
+                position: [6, 2, 4],
+                color: 0x44ff88,
+                zone: 'all-clients',
+                description: 'Player-specific data that everyone needs to see: name, score, team, stats. Replicated to ALL clients. Use this for scoreboard data, not PlayerController. Persists across Pawn deaths.',
+                keyPoints: ['Replicated to All', 'Player Score/Name', 'Survives Pawn Death', 'Scoreboard Data']
+            },
+            'Pawn': {
+                position: [0, -2, 6],
+                color: 0x44ff88,
+                zone: 'all-clients',
+                description: 'The physical body in the game world. Replicated to all clients so everyone can see each other. Can be destroyed (player death) and respawned. Character is a specialized Pawn with movement.',
+                keyPoints: ['Physical Body', 'Replicated to All', 'Can Be Destroyed', 'Possessed by Controller']
+            },
+            'Character': {
+                position: [0, -5, 6],
+                color: 0x44ff88,
+                zone: 'all-clients',
+                description: 'A specialized Pawn with built-in CharacterMovementComponent, capsule collision, and skeletal mesh support. The standard choice for humanoid player characters with walking/jumping.',
+                keyPoints: ['Extends Pawn', 'Movement Component', 'Skeletal Mesh', 'Capsule Collision']
+            },
+            'HUD': {
+                position: [-8, -2, 0],
+                color: 0xffaa44,
+                zone: 'owning-client',
+                description: 'The player\'s interface - exists ONLY on the owning client. Other players cannot see or access your HUD. Server doesn\'t have HUD instances. Now mostly replaced by UMG widgets.',
+                keyPoints: ['Client Only', 'Local UI', 'Per-Player View', 'Canvas Rendering']
+            },
+            'GameInstance': {
+                position: [8, -2, -4],
+                color: 0xaa44ff,
+                zone: 'local-only',
+                description: 'Persists across level loads - the ONLY class that survives map travel. Each machine (server and clients) has its own separate instance. Perfect for storing settings, account data, and persistent stats.',
+                keyPoints: ['Survives Level Load', 'Local Per-Machine', 'Persistent Data', 'Not Replicated']
+            },
+            'AIController': {
+                position: [6, 5, -4],
+                color: 0xff4444,
+                zone: 'server-only',
+                description: 'The "brain" for AI-controlled Pawns. Like PlayerController but for NPCs. Runs on server only - clients don\'t need to simulate AI decisions. Behavior Trees run through this class.',
+                keyPoints: ['Server Only', 'AI Logic', 'Behavior Trees', 'Possesses AI Pawns']
+            }
+        };
+        
+        // Create zone platforms
+        function createZonePlatform(y, color, size, opacity = 0.1) {
+            const geometry = new THREE.BoxGeometry(size, 0.1, size);
+            const material = new THREE.MeshBasicMaterial({ 
+                color: color, 
+                transparent: true, 
+                opacity: opacity 
+            });
+            const platform = new THREE.Mesh(geometry, material);
+            platform.position.y = y;
+            
+            // Add grid lines
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.3 }));
+            line.position.y = y;
+            
+            scene.add(platform);
+            scene.add(line);
+        }
+        
+        // Add zone platforms
+        createZonePlatform(7, 0xff4444, 12, 0.05); // Server zone
+        createZonePlatform(3, 0x44ff88, 18, 0.05); // Replicated zone
+        createZonePlatform(-1, 0xffaa44, 14, 0.05); // Mixed zone
+        
+        // Store meshes for raycasting
+        const classMeshes = [];
+        const labels = [];
+        
+        // Create class boxes
+        function createClassBox(name, data) {
+            const group = new THREE.Group();
+            
+            // Main box
+            const geometry = new THREE.BoxGeometry(2.5, 1.5, 2.5);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: data.color,
+                emissive: data.color,
+                emissiveIntensity: 0.2,
+                shininess: 100
+            });
+            const box = new THREE.Mesh(geometry, material);
+            box.userData = { name: name, data: data };
+            
+            // Glow effect
+            const glowGeometry = new THREE.BoxGeometry(2.7, 1.7, 2.7);
+            const glowMaterial = new THREE.MeshBasicMaterial({ 
+                color: data.color, 
+                transparent: true, 
+                opacity: 0.15 
+            });
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            
+            // Edges
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ 
+                color: 0xffffff, 
+                transparent: true, 
+                opacity: 0.5 
+            }));
+            
+            group.add(glow);
+            group.add(box);
+            group.add(line);
+            group.position.set(...data.position);
+            
+            scene.add(group);
+            classMeshes.push(box);
+            
+            // Create floating label
+            createLabel(name, data.position, data.color);
+            
+            return group;
+        }
+        
+        // Create text labels using sprites
+        function createLabel(text, position, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+            
+            context.fillStyle = 'rgba(10, 10, 20, 0.8)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.strokeStyle = `#${color.toString(16).padStart(6, '0')}`;
+            context.lineWidth = 2;
+            context.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            
+            context.font = 'bold 24px Orbitron, sans-serif';
+            context.fillStyle = '#ffffff';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, canvas.width / 2, canvas.height / 2);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            sprite.position.set(position[0], position[1] + 1.5, position[2]);
+            sprite.scale.set(4, 1, 1);
+            
+            scene.add(sprite);
+            labels.push(sprite);
+        }
+        
+        // Create connection lines between classes
+        function createConnection(from, to, color = 0x0088ff, dashed = false) {
+            const points = [
+                new THREE.Vector3(...classData[from].position),
+                new THREE.Vector3(...classData[to].position)
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            
+            let material;
+            if (dashed) {
+                material = new THREE.LineDashedMaterial({ 
+                    color: color, 
+                    transparent: true, 
+                    opacity: 0.4,
+                    dashSize: 0.3,
+                    gapSize: 0.2
+                });
+            } else {
+                material = new THREE.LineBasicMaterial({ 
+                    color: color, 
+                    transparent: true, 
+                    opacity: 0.4 
+                });
+            }
+            
+            const line = new THREE.Line(geometry, material);
+            if (dashed) line.computeLineDistances();
+            scene.add(line);
+        }
+        
+        // Create all class boxes
+        Object.entries(classData).forEach(([name, data]) => {
+            createClassBox(name, data);
+        });
+        
+        // Create connections
+        createConnection('GameMode', 'GameState', 0x44ff88);
+        createConnection('GameMode', 'PlayerController', 0xffaa44);
+        createConnection('GameMode', 'PlayerState', 0x44ff88);
+        createConnection('GameMode', 'AIController', 0xff4444);
+        createConnection('PlayerController', 'Pawn', 0x00ffff);
+        createConnection('PlayerController', 'PlayerState', 0xffaa44, true);
+        createConnection('PlayerController', 'HUD', 0xffaa44);
+        createConnection('GameState', 'PlayerState', 0x44ff88, true);
+        createConnection('Pawn', 'Character', 0x44ff88);
+        createConnection('AIController', 'Pawn', 0xff4444, true);
+        
+        // Add grid
+        const gridHelper = new THREE.GridHelper(30, 30, 0x222233, 0x111122);
+        gridHelper.position.y = -8;
+        scene.add(gridHelper);
+        
+        // Add axis indicator
+        const axisGroup = new THREE.Group();
+        const axisLength = 2;
+        
+        // Create small axis in corner
+        const xAxis = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(axisLength, 0, 0)]),
+            new THREE.LineBasicMaterial({ color: 0xff0000 })
+        );
+        const yAxis = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, axisLength, 0)]),
+            new THREE.LineBasicMaterial({ color: 0x00ff00 })
+        );
+        const zAxis = new THREE.Line(
+            new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, axisLength)]),
+            new THREE.LineBasicMaterial({ color: 0x0000ff })
+        );
+        
+        axisGroup.add(xAxis);
+        axisGroup.add(yAxis);
+        axisGroup.add(zAxis);
+        axisGroup.position.set(-12, -6, -12);
+        scene.add(axisGroup);
+        
+        // Add particles for atmosphere
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 500;
+        const posArray = new Float32Array(particlesCount * 3);
+        
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.05,
+            color: 0x0088ff,
+            transparent: true,
+            opacity: 0.5
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+        
+        // Mouse controls
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+        let currentRotationX = 0;
+        let currentRotationY = 0;
+        let cameraDistance = 25;
+        
+        renderer.domElement.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+        
+        renderer.domElement.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+                
+                targetRotationY += deltaX * 0.005;
+                targetRotationX += deltaY * 0.005;
+                targetRotationX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, targetRotationX));
+                
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+        
+        renderer.domElement.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        renderer.domElement.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+        
+        // Zoom
+        renderer.domElement.addEventListener('wheel', (e) => {
+            cameraDistance += e.deltaY * 0.02;
+            cameraDistance = Math.max(10, Math.min(50, cameraDistance));
+        });
+        
+        // Click to select
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        renderer.domElement.addEventListener('click', (e) => {
+            if (isDragging) return;
+            
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(classMeshes);
+            
+            if (intersects.length > 0) {
+                const selected = intersects[0].object;
+                showInfo(selected.userData.name, selected.userData.data);
+            }
+        });
+        
+        // Info panel functions
+        function showInfo(name, data) {
+            const panel = document.getElementById('info-panel');
+            const title = document.getElementById('info-title');
+            const desc = document.getElementById('info-desc');
+            const points = document.getElementById('info-points');
+            
+            const zoneColors = {
+                'server-only': { bg: '#ff4444', text: 'SERVER ONLY' },
+                'all-clients': { bg: '#44ff88', text: 'REPLICATED TO ALL' },
+                'owning-client': { bg: '#ffaa44', text: 'SERVER + OWNER' },
+                'local-only': { bg: '#aa44ff', text: 'LOCAL ONLY' }
+            };
+            
+            const zone = zoneColors[data.zone];
+            title.innerHTML = `${name} <span class="badge" style="background: ${zone.bg}; color: #000;">${zone.text}</span>`;
+            desc.textContent = data.description;
+            
+            points.innerHTML = data.keyPoints.map(point => 
+                `<span class="key-point">${point}</span>`
+            ).join('');
+            
+            panel.classList.add('active');
+        }
+        
+        window.closeInfoPanel = function() {
+            document.getElementById('info-panel').classList.remove('active');
+        }
+        
+        // Reset view
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                targetRotationX = 0;
+                targetRotationY = 0;
+                cameraDistance = 25;
+            }
+        });
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Smooth camera rotation
+            currentRotationX += (targetRotationX - currentRotationX) * 0.08;
+            currentRotationY += (targetRotationY - currentRotationY) * 0.08;
+            
+            camera.position.x = Math.sin(currentRotationY) * Math.cos(currentRotationX) * cameraDistance;
+            camera.position.y = Math.sin(currentRotationX) * cameraDistance + 5;
+            camera.position.z = Math.cos(currentRotationY) * Math.cos(currentRotationX) * cameraDistance;
+            camera.lookAt(0, 0, 0);
+            
+            // Animate particles
+            particlesMesh.rotation.y += 0.0003;
+            
+            // Make labels always face camera
+            labels.forEach(label => {
+                label.quaternion.copy(camera.quaternion);
+            });
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
